@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 import tkinter.font as font
 import random
 import math
-from hashlib import sha256
+from hashlib import sha512
 
 
 def load(username, passwd):
@@ -41,7 +41,7 @@ def login():
         errorLabel.config(text="Enter a username and a password\nto log in!")
         return
     try:
-        if json.load(open("Saves/{0}.json".format(username)))["passwd"] != passwd:
+        if json.load(open("Saves/{0}.json".format(username)))["passwd"] != sha512(passwd.encode()).hexdigest():
             errorLabel.config(text="Password is incorrect.")
             return
         else:
@@ -58,9 +58,9 @@ def save():
     Function to save the current user's data to the "Saves" directory as a .json file.
     """
     global username, passwd, sectors, money, reputation
-    with open("Saves\{0}.json".format(username), "r") as f:
+    with open("Saves\{0}.json".format(username), "r"):
         #TODO save data as dict here
-        loaded = {"username": username, "passwd": sha256(passwd.encode()).hexdigest(), "money": money, "reputation": reputation, "lastOnline": time.time(),
+        loaded = {"username": username, "passwd": sha512(passwd.encode()).hexdigest(), "money": money, "reputation": reputation, "lastOnline": time.time(),
             "sectors": sectors
         }
         with open("Saves\{0}.json".format(username), "w") as g:
@@ -81,6 +81,8 @@ def register():
         with open("Saves\{0}.json".format(username), "a") as f:
             f.write('{}')
         save()
+    else:
+        errorLabel.config(text="There is already another save with that username.")
 
 
 username = str()
@@ -94,6 +96,16 @@ reputation = int()
 lastOnline = int()
 # Maximum amount of reputation which can be earned by being offline.
 MAX_REPUTATION_OFFLINE = 100
+# Defines the function which is used to calculate the reputation which is subtracted in the "collectTax" function.
+"""
+    The higher the number submitted to this function as x, the lower the number returned, representing a probability between 0 and 100, will be and vice versa.
+    If the number entered as x is squared greater than y*10, the function returns 0.0. (e.g. RETURN_PROB(15, 20) will return 0.0
+    because 15**2=225 is greater than 20*10=200, so y*10-x**2=200-225=-25, which the max function sets to 0. And 0/a always equals 0)
+    The last variable is used to make the calculation relative meaning its more likely to be inside a certain frame because the higher the result in the dividend,
+    the higher the difference will be to the actually returned number. (e.g. 100/10=10, the difference being 90, though 1000/10=100, the difference being 900)
+    If you imagine the function as a graph, the variable a edits the curve., though not the min value to return 0.0.
+"""
+RETURN_PROB = lambda x, y, a: max(0, y*10-x**2)/a
 
 sectors = list()
 for i in range(9):
@@ -120,7 +132,6 @@ getButton = tk.Button(master=inputWin, text="Login", command=login); getButton.p
 registerButton = tk.Button(master=inputWin, text="Register", command=register); registerButton.place(x=100, y=100)
 
 inputWin.mainloop()
-
 
 
 def mainMenu():
@@ -164,7 +175,7 @@ def buildingMenu(index):
     buildingWin = tk.Toplevel(master=mainWindow)
     buildingWin.iconbitmap("Images/gear.ico")
     buildingWin.title("{0} - Building Menu".format(buildingDict["text"]))
-    buildingWin.geometry("1600x300+-10+600")
+    buildingWin.geometry("1600x300")
 
     
 
@@ -192,26 +203,41 @@ def buildMenu(index):
 
 
 def saveAndExit():
-    global mainWindow
+    global mainWindow, exitGame
     save()
     time.sleep(0.1)
+    exitGame = True
     mainWindow.destroy()
 
 
 def collectTax():
     """
     Function to collect a given amount of taxes "tax" from the villagers, decreasing your reputation.
+    Decreasing the reputation will prevent the user from collecting too much tax.
     """
     global money, reputation, sectors
+
+    if reputation <= 50:
+        pass
+
+    while True:
+        if reputationSubtract := random.randint(0, 100) < RETURN_PROB(random.randint(10, 50), 2750, 27.49):
+            break
+    
+    reputation -= reputationSubtract
+
+    if reputation < 0:
+        reputation = 0
+
     totalTax = int()
     for sector in sectors:
         for building in sector:
             try:
                 totalTax += building["values"]["taxes"]
             except:
+                # if the building currently iterating through has no "taxes" value, then skip it (e.g. an empty building space)
                 pass
     money += totalTax
-    reputation -= random.randint(10, 50)
 
 
 
@@ -233,38 +259,54 @@ if loggedIn:
     mainMenuButton = tk.Button(master=mainWindow, text="Main Menu", command=mainMenu)
     mainMenuButton.place(x=10, y=10)
 
-    sectorOneButton = tk.Button(master=mainWindow, bg="green", command=partial(loadSector, 0), text="1"); sectorOneButton.place(x=100, y=10, width=30, height=30)
-    sectorTwoButton = tk.Button(master=mainWindow, bg="blue", command=partial(loadSector, 1), text="2"); sectorTwoButton.place(x=130, y=10, width=30, height=30)
-    sectorThreeButton = tk.Button(master=mainWindow, bg="red", command=partial(loadSector, 2), text="3"); sectorThreeButton.place(x=160, y=10, width=30, height=30)
-    sectorFourButton = tk.Button(master=mainWindow, bg="lime", command=partial(loadSector, 3), text="4"); sectorFourButton.place(x=100, y=40, width=30, height=30)
-    sectorFiveButton = tk.Button(master=mainWindow, bg="light blue", command=partial(loadSector, 4), text="5"); sectorFiveButton.place(x=130, y=40, width=30, height=30)
-    sectorSixButton = tk.Button(master=mainWindow, bg="orange", command=partial(loadSector, 5), text="6"); sectorSixButton.place(x=160, y=40, width=30, height=30)
-    sectorSevenButton = tk.Button(master=mainWindow, bg="magenta", command=partial(loadSector, 6), text="7"); sectorSevenButton.place(x=100, y=70, width=30, height=30)
-    sectorEightButton = tk.Button(master=mainWindow, bg="gray", command=partial(loadSector, 7), text="8"); sectorEightButton.place(x=130, y=70, width=30, height=30)
-    sectorNineButton = tk.Button(master=mainWindow, bg="yellow", command=partial(loadSector, 8), text="9"); sectorNineButton.place(x=160, y=70, width=30, height=30)
+
+    y = 1
+    x = 1
+
+    sectorButtons = list()
+    buttonsize = 30
+    colorsList = ["#ff0000", "#ff6464", "#ff9696","#00ff00", "#64ff64", "#96ff96", "#0000ff", "#6464ff", "#9696ff"]
+
+    for i in range(9):
+            if x == 4:
+                x = 1
+                y += 1
+            sectorButtons.append(tk.Button(master=mainWindow, bg=colorsList[i], command=partial(loadSector, i), text=str(i)))
+            sectorButtons[i].place(x=x*buttonsize+200, y=y*buttonsize+40, height=buttonsize, width=buttonsize)
+            x += 1
+
 
     tk.Button(master=mainWindow, command=saveAndExit, text="Save & exit", bg="red").place(x=1400, y=10, height=50, width=75)
     taxButton = tk.Button(text="Collect taxes", command=collectTax, master=mainWindow); taxButton.place(x=10, y=300)
+    taxNotifications = tk.Label(master=mainWindow, text="", fg="red")
 
     coinLabel = tk.Label(master=mainWindow, text="Coins: {0}".format(money)); coinLabel.place(x=1300, y=10)
+
+
     def updateCoinLabel():
-        global coinLabel, money
-        while True:
+        global coinLabel, money, exitGame
+        while not exitGame:
             time.sleep(0.1)
             coinLabel.config(text="Coins: {0}".format(money))
-            if exitGame:
-                return
     
     def regenerateReputation():
-        global reputation
+        global reputation, exitGame
         while True:
             time.sleep(5)
             reputation += random.randint(1, 3)
             if exitGame:
                 return
     
-    threading.Thread(target=updateCoinLabel).start()
-    threading.Thread(target=regenerateReputation).start()
+    def returnRunningThreads():
+        while True:
+            print(threading.enumerate())
+            time.sleep(5)
+
+    threads = [threading.Thread(target=returnRunningThreads), threading.Thread(target=updateCoinLabel), threading.Thread(target=regenerateReputation)]
+
+    for i in range(len(threads)):
+        threads[i].setDaemon(True)
+        threads[i].start()
 
     line = 1
     y = 1
