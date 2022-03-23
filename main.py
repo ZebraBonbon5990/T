@@ -9,7 +9,7 @@ from hashlib import sha512
 
 def load(username, passwd):
     """
-    A function to load the data of a user, sets the global variables "sectors" and "money".
+    A function to load the data of a user, sets the global variables "sectors", "money", "reputation".
     
     """
     global errorLabel, sectors, money, reputation, lastOnline
@@ -21,6 +21,7 @@ def load(username, passwd):
             loaded = json.load(f)
             if passwd != loaded["passwd"]:
                 errorLabel.config(text="Password is incorrect!")
+                return
             else:
                 #TODO set game data here from var "loaded"
                 #! Globalize variables you are trying to load
@@ -45,7 +46,7 @@ def login():
             errorLabel.config(text="Password is incorrect.")
             return
         else:
-            load(username, passwd)
+            load(username, sha512(passwd.encode()).hexdigest())
             loggedIn = True
             inputWin.destroy()
     except:
@@ -82,7 +83,7 @@ def register():
             f.write('{}')
         save()
     else:
-        errorLabel.config(text="There is already another save with that username.")
+        errorLabel.config(text="There is already another save\nwith that username.")
 
 
 username = str()
@@ -221,7 +222,7 @@ def collectTax():
         pass
 
     while True:
-        if reputationSubtract := random.randint(0, 100) < RETURN_PROB(random.randint(10, 50), 2750, 27.49):
+        if random.randint(0, 100) < RETURN_PROB(reputationSubtract := random.randint(10, 50), 2750, 27.49):
             break
     
     reputation -= reputationSubtract
@@ -281,6 +282,8 @@ if loggedIn:
     taxNotifications = tk.Label(master=mainWindow, text="", fg="red")
 
     coinLabel = tk.Label(master=mainWindow, text="Coins: {0}".format(money)); coinLabel.place(x=1300, y=10)
+    coinImage = ImageTk.PhotoImage(Image.open("Images/coin.ico").resize((22, 22)))
+    coinImageLabel = tk.Label(mainWindow, image=coinImage); coinImageLabel.place(x=1278, y=10)
 
 
     def updateCoinLabel():
@@ -292,17 +295,15 @@ if loggedIn:
     def regenerateReputation():
         global reputation, exitGame
         while True:
-            time.sleep(5)
-            reputation += random.randint(1, 3)
+            time.sleep(30)
+            while True:
+                if random.randint(0, 100) < RETURN_PROB(reputationGain := random.randint(10, 50), 2750, 27.49):
+                    break
+            reputation += reputationGain
             if exitGame:
                 return
-    
-    def returnRunningThreads():
-        while True:
-            print(threading.enumerate())
-            time.sleep(5)
 
-    threads = [threading.Thread(target=returnRunningThreads), threading.Thread(target=updateCoinLabel), threading.Thread(target=regenerateReputation)]
+    threads = [threading.Thread(target=updateCoinLabel), threading.Thread(target=regenerateReputation)]
 
     for i in range(len(threads)):
         threads[i].setDaemon(True)
