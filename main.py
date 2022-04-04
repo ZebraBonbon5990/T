@@ -104,7 +104,7 @@ MAX_REPUTATION_OFFLINE = 100
     because 15**2=225 is greater than 20*10=200, so y*10-x**2=200-225=-25, which the max function sets to 0. And 0/a always equals 0)
     The last variable is used to make the calculation relative meaning its more likely to be inside a certain frame because the higher the result in the dividend,
     the higher the difference will be to the actually returned number. (e.g. 100/10=10, the difference being 90, though 1000/10=100, the difference being 900)
-    If you imagine the function as a graph, the variable a edits the curve., though not the min value to return 0.0.
+    If you imagine the function as a graph, the variable a edits the curve.
 """
 RETURN_PROB = lambda x, y, a: max(0, y*10-x**2)/a
 
@@ -143,7 +143,7 @@ def mainMenu():
 
 
 def loadSector(index):
-    global sectorButtons, sectors, currentSector
+    global sectorButtons, sectors, currentSector, sectorLabel, sectorColorsList
     selectedSector = sectors[index]
     currentSector = index
     for i in range(25):
@@ -153,6 +153,7 @@ def loadSector(index):
         except:
             sectorButtons[i]["button"].config(text="", command=partial(buildMenu, i))
             sectorButtons[i]["values"] = {}
+    sectorLabel.config(text="Sector: {}".format(currentSector), fg=sectorColorsList[currentSector])
 
 
 def build(index, buildingDict, buildWin, errLabel):
@@ -166,8 +167,27 @@ def build(index, buildingDict, buildWin, errLabel):
         errLabel.config(text="You can't afford that.")
 
 
+def upgrade(index):
+    global currentSector, upgradeWin, buildingWin
+    try:
+        upgradeWin.destroy()
+    except:
+        pass
+
+    buildingDict = sectors[currentSector][index]
+
+    upgradeWin = tk.Toplevel(master=buildingWin)
+    upgradeWin.title("Upgrade - {}".format(buildingDict["text"]))
+    upgradeWin.iconbitmap("Images/upgrade.ico")
+    upgradeWin.geometry("1600x300+-10+10")
+    
+    tk.Label(master=upgradeWin, text="Upgrade the {} to level {}? This will increase the buildings values by {}%.({}/{} gold)".format(buildingDict["text"], buildingDict["level"] + 1, buildingDict["valuesGrowth"]*100 - 100, money, (math.floor(buildingDict["cost"]*buildingDict["upgradeCostGrowth"]**buildingDict["level"])))).place(x=10, y=10)
+
+    upgradeWin.mainloop()
+
+
 def buildingMenu(index):
-    global buildingWin
+    global buildingWin, currentSector
     try:
         buildingWin.destroy()
     except:
@@ -176,7 +196,16 @@ def buildingMenu(index):
     buildingWin = tk.Toplevel(master=mainWindow)
     buildingWin.iconbitmap("Images/gear.ico")
     buildingWin.title("{0} - Building Menu".format(buildingDict["text"]))
-    buildingWin.geometry("1600x300")
+    buildingWin.geometry("1600x300+-10+0")
+
+    infoLabel = tk.Label(master=buildingWin, text=buildingDict["description"])
+    infoLabel.place(x=10, y=10)
+
+    if "upgradeCostGrowth" in buildingDict.keys():
+        upgradeButton = tk.Button(master=buildingWin, text="Upgrade Building", command=partial(upgrade, index))
+        upgradeButton.place(x=10, y=50)
+    else:
+        tk.Label(master=buildingWin, text="This building cannot be upgraded.", fg="red").place(x=10, y=50)
 
     
 
@@ -216,10 +245,13 @@ def collectTax():
     Function to collect a given amount of taxes "tax" from the villagers, decreasing your reputation.
     Decreasing the reputation will prevent the user from collecting too much tax.
     """
-    global money, reputation, sectors
+    global money, reputation, sectors, taxNotifications
 
     if reputation <= 50:
-        pass
+        taxNotifications.config(text="Not enough reputation!")
+        return
+    else:
+        taxNotifications.config(text="")
 
     while True:
         if random.randint(0, 100) < RETURN_PROB(reputationSubtract := random.randint(10, 50), 2750, 27.49):
@@ -236,16 +268,32 @@ def collectTax():
             try:
                 totalTax += building["values"]["taxes"]
             except:
-                # if the building currently iterating through has no "taxes" value, then skip it (e.g. an empty building space)
                 pass
+    
     money += totalTax
 
+
+def getReputationBonus():
+    """
+    Returns the bonus reputation earned per hour through buildings.
+    """
+    global sectors
+    totalBonus = 0
+
+    for sector in sectors:
+        for building in sector:
+            try:
+                totalBonus += building["values"]["reputationPerHour"]
+            except:
+                pass
+    
+    return totalBonus
 
 
 if loggedIn:
 
-    diffTime = int(math.floor(time.time() - lastOnline))
-    if (reputationReward := diffTime / 900) > MAX_REPUTATION_OFFLINE:
+    diffTime = (time.time() - lastOnline)
+    if (reputationReward := (round(diffTime / 1200, 5) + round(getReputationBonus()*((diffTime/3600)), 5))) > MAX_REPUTATION_OFFLINE:
         reputationReward = MAX_REPUTATION_OFFLINE
     reputation += reputationReward
 
@@ -253,9 +301,6 @@ if loggedIn:
     mainWindow.attributes("-fullscreen", True)
     mainWindow.iconbitmap("Images/crown.ico")
     mainWindow.title("Town King")
-
-    coinSym = tk.Label(master=mainWindow, image=ImageTk.PhotoImage(Image.open("Images/coin.ico")))
-    coinSym.place(x=1200, y=10)
 
     mainMenuButton = tk.Button(master=mainWindow, text="Main Menu", command=mainMenu)
     mainMenuButton.place(x=10, y=10)
@@ -266,20 +311,20 @@ if loggedIn:
 
     sectorButtons = list()
     buttonsize = 30
-    colorsList = ["#ff0000", "#ff6464", "#ff9696","#00ff00", "#64ff64", "#96ff96", "#0000ff", "#6464ff", "#9696ff"]
+    sectorColorsList = ["#ff0000", "#ff6464", "#ff9696","#00ff00", "#64ff64", "#96ff96", "#0000ff", "#6464ff", "#9696ff"]
 
     for i in range(9):
             if x == 4:
                 x = 1
                 y += 1
-            sectorButtons.append(tk.Button(master=mainWindow, bg=colorsList[i], command=partial(loadSector, i), text=str(i)))
+            sectorButtons.append(tk.Button(master=mainWindow, bg=sectorColorsList[i], command=partial(loadSector, i), text=str(i)))
             sectorButtons[i].place(x=x*buttonsize+200, y=y*buttonsize+40, height=buttonsize, width=buttonsize)
             x += 1
 
 
     tk.Button(master=mainWindow, command=saveAndExit, text="Save & exit", bg="red").place(x=1400, y=10, height=50, width=75)
     taxButton = tk.Button(text="Collect taxes", command=collectTax, master=mainWindow); taxButton.place(x=10, y=300)
-    taxNotifications = tk.Label(master=mainWindow, text="", fg="red")
+    taxNotifications = tk.Label(master=mainWindow, text="", fg="red"); taxNotifications.place(x=10, y=330)
 
     coinLabel = tk.Label(master=mainWindow, text="Coins: {0}".format(money)); coinLabel.place(x=1300, y=10)
     coinImage = ImageTk.PhotoImage(Image.open("Images/coin.ico").resize((22, 22)))
@@ -299,7 +344,8 @@ if loggedIn:
             while True:
                 if random.randint(0, 100) < RETURN_PROB(reputationGain := random.randint(10, 50), 2750, 27.49):
                     break
-            reputation += reputationGain
+            
+            reputation += reputationGain + round(getReputationBonus()/120, 5)
             if exitGame:
                 return
 
@@ -309,17 +355,20 @@ if loggedIn:
         threads[i].setDaemon(True)
         threads[i].start()
 
-    line = 1
+    x = 1
     y = 1
     sectorButtons = list()
     buttonHeight, buttonWidth = 100, 100
     for n in range(25):
-        if line == 6:
+        if x == 6:
             y += 1
-            line = 1
+            x = 1
         sectorButtons.append({"button": tk.Button(master=mainWindow), "values": {}})
-        sectorButtons[n]["button"].place(x=line*(buttonWidth + 10) + 300, y=y*(buttonHeight + 10) - 80, height=buttonHeight, width=buttonWidth)
-        line += 1
+        sectorButtons[n]["button"].place(x=x*(buttonWidth + 10) + 300, y=y*(buttonHeight + 10) - 80, height=buttonHeight, width=buttonWidth)
+        x += 1
+    
+    sectorLabel = tk.Label(master=mainWindow, text="Sector: {}".format(currentSector), fg=sectorColorsList[currentSector], font="Helvetica 18 bold"); sectorLabel.place(x=1000, y=30)
+
     loadSector(currentSector)
 
     mainWindow.mainloop()
