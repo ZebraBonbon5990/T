@@ -76,6 +76,8 @@ def register():
     global username, passwd
     username = usernameEntry.get()
     passwd = passwdEntry.get()
+    if not os.path.isdir("Saves"):
+        os.mkdir("Saves")
     if not "{0}.json".format(username) in os.listdir("Saves"):
         with open("Saves\{0}.json".format(username), "x"):
             pass
