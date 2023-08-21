@@ -354,7 +354,7 @@ if loggedIn:
     threads = [threading.Thread(target=updateCoinLabel), threading.Thread(target=regenerateReputation)]
 
     for i in range(len(threads)):
-        threads[i].setDaemon(True)
+        threads[i].daemon = True
         threads[i].start()
 
     x = 1
