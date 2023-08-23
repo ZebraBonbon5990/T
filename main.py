@@ -376,3 +376,4 @@ if loggedIn:
     mainWindow.mainloop()
 
     print("amogus")
+    print("hello")
