@@ -376,5 +376,3 @@ if loggedIn:
     mainWindow.mainloop()
 
     print("sus")
-
-    print("heheheha")
