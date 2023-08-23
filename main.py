@@ -109,6 +109,7 @@ MAX_REPUTATION_OFFLINE = 100
     If you imagine the function as a graph, the variable a edits the curve.
 """
 RETURN_PROB = lambda x, y, a: max(0, y*10-x**2)/a
+print(RETURN_PROB(15, 2750, 27.49))
 
 sectors = list()
 for i in range(9):
@@ -150,7 +151,7 @@ def loadSector(index):
     currentSector = index
     for i in range(25):
         try:
-            sectorButtons[i]["button"].config(text=selectedSector[i]["text"], command=partial(buildingMenu, i))
+            sectorButtons[i]["button"].config(text=selectedSector[i]["text"], command=partial(buildingInfo, i))
             sectorButtons[i]["values"] = selectedSector[i]["values"]
         except:
             sectorButtons[i]["button"].config(text="", command=partial(buildMenu, i))
@@ -188,7 +189,7 @@ def upgrade(index):
     upgradeWin.mainloop()
 
 
-def buildingMenu(index):
+def buildingInfo(index):
     global buildingWin, currentSector
     try:
         buildingWin.destroy()
@@ -258,6 +259,7 @@ def collectTax():
     while True:
         if random.randint(0, 100) < RETURN_PROB(reputationSubtract := random.randint(10, 50), 2750, 27.49):
             break
+        print("recycled")
     
     reputation -= reputationSubtract
 
