@@ -108,8 +108,7 @@ MAX_REPUTATION_OFFLINE = 100
     the higher the difference will be to the actually returned number. (e.g. 100/10=10, the difference being 90, though 1000/10=100, the difference being 900)
     If you imagine the function as a graph, the variable a edits the curve.
 """
-RETURN_PROB = lambda x, y, a: max(0, y*10-x**2)/a
-print(RETURN_PROB(15, 2750, 27.49))
+RETURN_PROB = lambda x, y, a: (y*10-x**2.6)/a
 
 sectors = list()
 for i in range(9):
@@ -259,7 +258,6 @@ def collectTax():
     while True:
         if random.randint(0, 100) < RETURN_PROB(reputationSubtract := random.randint(10, 50), 2750, 27.49):
             break
-        print("recycled")
     
     reputation -= reputationSubtract
 
