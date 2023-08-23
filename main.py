@@ -374,5 +374,3 @@ if loggedIn:
     loadSector(currentSector)
 
     mainWindow.mainloop()
-
-    print("sus")
