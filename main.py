@@ -374,3 +374,5 @@ if loggedIn:
     loadSector(currentSector)
 
     mainWindow.mainloop()
+
+    print("amogus")
